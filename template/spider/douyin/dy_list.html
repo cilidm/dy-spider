@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>资源管理</title>
+    <link rel="stylesheet" href="/static/component/pear/css/pear.css" />
+    <meta name="referrer" content="no-referrer"/>
+</head>
+
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-body">
+        <form class="layui-form" action="">
+            <div class="layui-form-item">
+                <div class="layui-form-item layui-inline">
+                    <label class="layui-form-label">用户名</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="user_name" placeholder="" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item layui-inline">
+                    <label class="layui-form-label">分享链接</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="url" placeholder="" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item layui-inline">
+                    <label class="layui-form-label">标题</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="info" placeholder="" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item layui-inline">
+                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="user-query">
+                        <i class="layui-icon layui-icon-search"></i>
+                        查询
+                    </button>
+                    <button type="reset" class="pear-btn pear-btn-md">
+                        <i class="layui-icon layui-icon-refresh"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="layui-card">
+    <div class="layui-card-body">
+        <table id="role-table" lay-filter="role-table"></table>
+    </div>
+</div>
+
+<script type="text/html" id="user-toolbar">
+    <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="add">
+        <i class="layui-icon layui-icon-add-1"></i>
+        新增
+    </button>
+</script>
+
+<script type="text/html" id="user-bar">
+    <button class="pear-btn pear-btn-warming pear-btn-sm" lay-event="power"><i class="layui-icon layui-icon-link"></i></button>
+    <button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="downAll"><i class="layui-icon layui-icon-auz"></i></button>
+</script>
+
+<script src="/static/component/layui/layui.js"></script>
+<script src="/static/component/pear/pear.js"></script>
+<script>
+    layui.use(['table', 'form', 'jquery', 'common','upload'], function() {
+        let table = layui.table;
+        let form = layui.form;
+        let $ = layui.jquery;
+        let common = layui.common;
+        let upload = layui.upload;
+
+        $.ajaxSetup({
+            xhrFields: {
+                withCredentials: true
+            },
+        });
+        table.render({
+            elem: '#role-table',
+            url: '/system/spider/json',
+            page: true,
+            cols: [
+                [
+                    {field: 'id', title: 'ID',width:75, align: 'center', sort: true},
+                    {field:'cover', title:'封面',width:85, templet: function(res){
+                            return '<img src="'+ res.cover +'" width="33px">'
+                        }},
+                    {field: 'info', title: '标题', align: 'center', sort: true},
+                    {field: 'user_name', title: '用户名', align: 'center', sort: true},
+                    {field: 'url', title: '分享链接', align: 'center', sort: true},
+                    {field: 'save_path', title: '本地地址',width: 180, align: 'center', sort: true, templet: function(res){
+                            if(res.has_down == 1){
+                                return '<a class="pear-btn pear-btn-warming pear-btn-sm" href="/'+res.save_path+'" target="_blank">点击查看</a>'
+                            }else{
+                                return '<a class="pear-btn pear-btn-danger pear-btn-sm" target="_blank">视频未下载</a>'
+                            }
+                        }},
+                    {title: '操作', toolbar: '#user-bar', align: 'center', width: 140}
+                ]
+            ],
+            skin: 'line',
+            toolbar: '#user-toolbar',
+            defaultToolbar: [{
+                title: '刷新',
+                layEvent: 'refresh',
+                icon: 'layui-icon-refresh',
+            }, 'filter', 'print', 'exports']
+        });
+
+        table.on('tool(role-table)', function(obj) {
+            if (obj.event === 'downAll') {
+                window.downAll(obj);
+            } else if (obj.event === 'downOne') {
+                window.downOne(obj);
+            }else if (obj.event === 'power') {
+                window.open(obj.data["online_url"]);
+            }
+        });
+
+        table.on('toolbar(role-table)', function(obj) {
+            if (obj.event === 'add') {
+                window.add();
+            } else if (obj.event === 'refresh') {
+                window.refresh();
+            }
+        });
+
+        form.on('submit(user-query)', function(data) {
+            table.reload('role-table', {
+                where: data.field
+            })
+            return false;
+        });
+
+        upload.render({
+            elem: '#import-bookmark'
+            ,url: '/system/bookmark/upload' //改成您自己的上传接口
+            ,accept: 'file' //普通文件
+            ,exts: 'html|htm'
+            ,before: function(obj){//参数
+                layer.load(2, { shade: [0.35, '#ccc'] });
+            }
+            ,done: function(res){
+                layer.closeAll('loading');
+                layer.msg('上传成功');
+                history.go(0);
+            }
+        });
+
+        window.add = function() {
+            layer.open({
+                type: 2,
+                title: '新增',
+                shade: 0.1,
+                area: [common.isModile() ? '100%' : '600px', common.isModile() ? '100%' : '400px'],
+                content: '/system/spider/add'
+            });
+        }
+
+        window.downOne = function(obj) {
+            layer.open({
+                type: 2,
+                title: '修改',
+                shade: 0.1,
+                area: ['600px', '450px'],
+                content: '/system/spider/edit/?id=' + obj.data["id"]
+            });
+        }
+
+        window.downAll = function(obj) {
+            layer.confirm('下载该主播所有视频？', {
+                icon: 3,
+                title: '提示'
+            }, function(index) {
+                layer.close(index);
+                let loading = layer.load(2, { shade: [0.35, '#ccc'] });
+                $.ajax({
+                    url: "/system/spider/down_all",
+                    data: {url: obj.data['url']},
+                    dataType: 'json',
+                    type: 'POST',
+                    success: function(result) {
+                        layer.close(loading);
+                        if (result.code == 200) {
+                            layer.msg(result.msg, {
+                                icon: 1,
+                                time: 1000
+                            }, function() {
+                                window.refresh();
+                            });
+                        } else {
+                            layer.close(loading);
+                            layer.msg(result.msg, {
+                                icon: 2,
+                                time: 1000
+                            });
+                        }
+                    }
+                })
+            });
+        }
+
+        window.refresh = function(param) {
+            table.reload('role-table');
+        }
+    })
+</script>
+</body>
+
+</html>
